@@ -1,8 +1,18 @@
-# Use stable, minimal base image
-FROM nginx:1.25-alpine
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
 
-# Copy your HTML into Nginx default web directory
-COPY index.html /usr/share/nginx/html/index.html
+FROM node:20-alpine
+ENV NODE_ENV=production
+ENV PORT=8080
 
-# Expose the default Nginx port
-EXPOSE 80
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --from=builder /app /app
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 8080
+CMD ["node", "server.js"]
